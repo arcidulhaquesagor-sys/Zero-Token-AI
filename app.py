@@ -1,9 +1,9 @@
-from flask import Flask, render_template, request, jsonify
+import os
 import random
+from flask import Flask, render_template, request, jsonify, send_file
 
-app = Flask(__name__)
+app = Flask(__name__, template_folder="templates")
 
-# A zero-token rule-based "AI" brain with keyword intelligence
 AI_KB = {
     "hello": ["Hello there! How can I help you build something awesome today?", "Hi! What's on your mind?"],
     "help": ["I am a zero-token AI built to assist you. Try asking me about coding, life, or weather!"],
@@ -28,14 +28,29 @@ def get_smart_response(user_message):
 
 @app.route("/")
 def home():
+    # 1. Standard Flask template lookup
+    template_path = os.path.join(app.root_path, "templates", "index.html")
+    if os.path.exists(template_path):
+        return render_template("index.html")
+    
+    # 2. Fallbacks if index.html was placed in root or uppercase Templates folder
+    fallbacks = [
+        os.path.join(app.root_path, "index.html"),
+        os.path.join(app.root_path, "Templates", "index.html"),
+    ]
+    for path in fallbacks:
+        if os.path.exists(path):
+            return send_file(path)
+            
     return render_template("index.html")
 
 @app.route("/chat", methods=["POST"])
 def chat():
-    data = request.get_json()
+    data = request.get_json() or {}
     user_msg = data.get("message", "")
     bot_reply = get_smart_response(user_msg)
     return jsonify({"reply": bot_reply})
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port, debug=False)
